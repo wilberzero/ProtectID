@@ -71,39 +71,66 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleFile = (file) => {
         if (!file || !file.type.startsWith('image/')) return;
 
-        // Create object URL for better performance and reliability with camera captures
+        // 1. Create object URL from file
         const objectUrl = URL.createObjectURL(file);
-        const img = new Image();
+        const tempImg = new Image();
 
-        img.onload = () => {
-            // Revoke the object URL after loading to free memory
+        tempImg.onload = () => {
             URL.revokeObjectURL(objectUrl);
 
-            originalImage = img;
-            canvas.width = img.width;
-            canvas.height = img.height;
-            processingCanvas.width = img.width;
-            processingCanvas.height = img.height;
-            uploadSection.classList.add('hidden');
-            editorSection.classList.remove('hidden');
+            // 2. Calculate new dimensions (Max 1920px due to mobile RAM limits)
+            const MAX_DIM = 1920;
+            let width = tempImg.width;
+            let height = tempImg.height;
 
-            // Reset any previous state
-            redactions = [];
-            selectedIndex = -1;
-            isBlackAndWhite = false;
-            watermarkText = '';
-            inputWatermark.value = '';
+            if (width > MAX_DIM || height > MAX_DIM) {
+                if (width > height) {
+                    height = Math.round((height * MAX_DIM) / width);
+                    width = MAX_DIM;
+                } else {
+                    width = Math.round((width * MAX_DIM) / height);
+                    height = MAX_DIM;
+                }
+            }
 
-            render();
+            // 3. Resize using canvas
+            processingCanvas.width = width;
+            processingCanvas.height = height;
+            ctx.drawImage(tempImg, 0, 0, width, height);
+
+            // 4. Create optimized Image object for the app to use
+            const optimizedImg = new Image();
+            optimizedImg.onload = () => {
+                originalImage = optimizedImg;
+
+                // Set main canvas size
+                canvas.width = width;
+                canvas.height = height;
+
+                // UI Transition
+                uploadSection.classList.add('hidden');
+                editorSection.classList.remove('hidden');
+
+                // Reset State
+                redactions = [];
+                selectedIndex = -1;
+                isBlackAndWhite = false;
+                watermarkText = '';
+                inputWatermark.value = '';
+
+                render();
+            };
+
+            // Export from canvas to new image (High quality JPEG)
+            optimizedImg.src = processingCanvas.toDataURL('image/jpeg', 0.85);
         };
 
-        img.onerror = () => {
+        tempImg.onerror = () => {
             URL.revokeObjectURL(objectUrl);
-            console.error('Error loading image');
-            alert('Error al cargar la imagen. Por favor, intenta de nuevo.');
+            alert('Error al cargar la imagen. Intenta usar una imagen de la galería.');
         };
 
-        img.src = objectUrl;
+        tempImg.src = objectUrl;
     };
 
     // Handle click on upload zone
