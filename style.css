@@ -134,6 +134,13 @@ body {
     color: var(--text-muted);
 }
 
+.camera-hint {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: var(--primary);
+    opacity: 0.8;
+}
+
 /* Editor Section */
 .editor-container {
     display: flex;
@@ -392,7 +399,12 @@ canvas {
 /* Button Text Responsive */
 @media (max-width: 480px) {
     .btn-text {
-        display: none;
+        font-size: 0.65rem;
+    }
+
+    .tool-btn.primary {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.8rem;
     }
 }
 

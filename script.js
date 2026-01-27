@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Interaction State
     let selectedIndex = -1;
     let startPos = { x: 0, y: 0 };
+    let lastPos = { x: 0, y: 0 }; // Track last position for touch events
     let initialRectState = null;
 
     // Config
@@ -69,29 +70,67 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Upload Handlers ---
     const handleFile = (file) => {
         if (!file || !file.type.startsWith('image/')) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                originalImage = img;
-                canvas.width = img.width;
-                canvas.height = img.height;
-                processingCanvas.width = img.width;
-                processingCanvas.height = img.height;
-                uploadSection.classList.add('hidden');
-                editorSection.classList.remove('hidden');
-                render();
-            };
-            img.src = e.target.result;
+
+        // Create object URL for better performance and reliability with camera captures
+        const objectUrl = URL.createObjectURL(file);
+        const img = new Image();
+
+        img.onload = () => {
+            // Revoke the object URL after loading to free memory
+            URL.revokeObjectURL(objectUrl);
+
+            originalImage = img;
+            canvas.width = img.width;
+            canvas.height = img.height;
+            processingCanvas.width = img.width;
+            processingCanvas.height = img.height;
+            uploadSection.classList.add('hidden');
+            editorSection.classList.remove('hidden');
+
+            // Reset any previous state
+            redactions = [];
+            selectedIndex = -1;
+            isBlackAndWhite = false;
+            watermarkText = '';
+            inputWatermark.value = '';
+
+            render();
         };
-        reader.readAsDataURL(file);
+
+        img.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            console.error('Error loading image');
+            alert('Error al cargar la imagen. Por favor, intenta de nuevo.');
+        };
+
+        img.src = objectUrl;
     };
 
-    uploadSection.addEventListener('click', () => fileInput.click());
+    // Handle click on upload zone
+    // Handle click on upload zone
+    uploadSection.addEventListener('click', (e) => {
+        // Prevent infinite loop if the click originated from the input itself
+        if (e.target === fileInput) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        fileInput.click();
+    });
+
     uploadSection.addEventListener('dragover', (e) => { e.preventDefault(); uploadSection.classList.add('dragover'); });
     uploadSection.addEventListener('dragleave', () => uploadSection.classList.remove('dragover'));
     uploadSection.addEventListener('drop', (e) => { e.preventDefault(); uploadSection.classList.remove('dragover'); handleFile(e.dataTransfer.files[0]); });
-    fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+    // Important: Handle file input change with proper event handling for camera
+    fileInput.addEventListener('change', (e) => {
+        // e.preventDefault(); // Removed to allow default behavior
+        const file = e.target.files[0];
+        if (file) {
+            handleFile(file);
+        }
+        // Reset input value to allow re-selecting the same file
+        e.target.value = '';
+    });
 
     // --- Interaction Logic ---
 
@@ -157,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const hit = hitTest(pos);
 
         startPos = pos;
+        lastPos = pos; // Initialize lastPos for touch tracking
         isDragging = true;
 
         if (typeof hit === 'object' && hit.type === 'select') {
@@ -178,11 +218,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isDragging) return;
         e.preventDefault();
         const pos = getPos(e);
+        lastPos = pos; // Store last position for touchend
 
         if (dragMode === 'create') {
             render(); // Clear
-            displayContext.fillStyle = 'rgba(0,0,0,0.5)';
-            displayContext.fillRect(startPos.x, startPos.y, pos.x - startPos.x, pos.y - startPos.y);
+            // Draw a solid black preview rectangle
+            displayContext.fillStyle = 'rgba(0,0,0,0.8)';
+            const x = Math.min(startPos.x, pos.x);
+            const y = Math.min(startPos.y, pos.y);
+            const w = Math.abs(pos.x - startPos.x);
+            const h = Math.abs(pos.y - startPos.y);
+            displayContext.fillRect(x, y, w, h);
             return;
         }
 
@@ -247,25 +293,31 @@ document.addEventListener('DOMContentLoaded', () => {
         isDragging = false;
 
         if (dragMode === 'create') {
-            // Handle creation logic
-            // (We need to handle Touch End pos carefully as before, but keeping this simple structure)
-            // Re-implementing simplified create for "Mouse Up" context mainly:
-            let pos = getPos(e);
-            if (e.type === 'touchend') {
+            // Use lastPos which was tracked during move, or try to get from changedTouches
+            let pos = lastPos;
+
+            // For mouse events, try to get the final position
+            if (e.type === 'mouseup') {
+                pos = getPos(e);
+            } else if (e.type === 'touchend' && e.changedTouches && e.changedTouches.length > 0) {
                 const rect = canvas.getBoundingClientRect();
                 const scaleX = canvas.width / rect.width;
-                if (e.changedTouches.length > 0) {
-                    pos.x = (e.changedTouches[0].clientX - rect.left) * scaleX;
-                    pos.y = (e.changedTouches[0].clientY - rect.top) * scaleX;
-                } else { pos = startPos; } // Fallback
+                pos = {
+                    x: (e.changedTouches[0].clientX - rect.left) * scaleX,
+                    y: (e.changedTouches[0].clientY - rect.top) * scaleX
+                };
+            }
+            // If pos is still at origin (no movement), use startPos as fallback
+            if (pos.x === 0 && pos.y === 0) {
+                pos = startPos;
             }
 
             const w = pos.x - startPos.x;
             const h = pos.y - startPos.y;
             if (Math.abs(w) > 5 && Math.abs(h) > 5) {
                 const newRect = {
-                    x: w < 0 ? pos.x : startPos.x,
-                    y: h < 0 ? pos.y : startPos.y,
+                    x: Math.min(pos.x, startPos.x),
+                    y: Math.min(pos.y, startPos.y),
                     w: Math.abs(w),
                     h: Math.abs(h),
                     rotation: 0
