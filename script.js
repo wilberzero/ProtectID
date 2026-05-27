@@ -333,23 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (dragMode === 'create') {
-            render(); // Clear
-            
-            const x = Math.min(startPos.x, pos.x);
-            const y = Math.min(startPos.y, pos.y);
-            const w = Math.abs(pos.x - startPos.x);
-            const h = Math.abs(pos.y - startPos.y);
-            
-            // Draw a premium gray semi-transparent preview rectangle
-            displayContext.fillStyle = 'rgba(160, 160, 180, 0.4)';
-            displayContext.fillRect(x, y, w, h);
-            
-            // Draw a beautiful dashed border to make it feel extremely premium
-            displayContext.strokeStyle = '#a0a0b0';
-            displayContext.lineWidth = 2;
-            displayContext.setLineDash([6, 4]);
-            displayContext.strokeRect(x, y, w, h);
-            displayContext.setLineDash([]); // Reset line dash
+            render();
             return;
         }
 
@@ -542,6 +526,26 @@ document.addEventListener('DOMContentLoaded', () => {
         // 5. Draw UI (Handles) on Display Canvas ONLY
         if (selectedIndex !== -1) {
             drawHandles(displayContext, redactions[selectedIndex]);
+        }
+
+        // 6. Draw active drawing preview on Display Canvas ONLY
+        if (isDragging && dragMode === 'create' && startPos && lastPos) {
+            const x = Math.min(startPos.x, lastPos.x);
+            const y = Math.min(startPos.y, lastPos.y);
+            const w = Math.abs(lastPos.x - startPos.x);
+            const h = Math.abs(lastPos.y - startPos.y);
+
+            displayContext.save();
+            // Draw a premium gray semi-transparent preview rectangle
+            displayContext.fillStyle = 'rgba(160, 160, 180, 0.4)';
+            displayContext.fillRect(x, y, w, h);
+
+            // Draw a beautiful dashed border to make it feel extremely premium
+            displayContext.strokeStyle = '#a0a0b0';
+            displayContext.lineWidth = 2;
+            displayContext.setLineDash([6, 4]);
+            displayContext.strokeRect(x, y, w, h);
+            displayContext.restore();
         }
     };
 
