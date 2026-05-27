@@ -376,6 +376,12 @@ canvas {
     .watermark-group {
         grid-template-columns: 1fr;
     }
+
+    #btn-delete {
+        order: -1;
+        width: 100%;
+        margin-bottom: 0.2rem;
+    }
 }
 
 /* Sliders */
