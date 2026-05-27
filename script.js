@@ -7,8 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const displayContext = canvas.getContext('2d');
 
     // Tools
+    const btnAddRect = document.getElementById('btn-add-rect');
     const btnBw = document.getElementById('btn-bw');
     const btnClear = document.getElementById('btn-clear');
+    const btnDelete = document.getElementById('btn-delete');
     const btnWatermark = document.getElementById('btn-watermark');
     const inputWatermark = document.getElementById('watermark-text');
     const btnDownload = document.getElementById('btn-download');
@@ -164,19 +166,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const getPos = (e) => {
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
-        // Handle touch vs mouse
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const scaleY = canvas.height / rect.height;
+
+        let clientX = 0;
+        let clientY = 0;
+
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else if (e.changedTouches && e.changedTouches.length > 0) {
+            clientX = e.changedTouches[0].clientX;
+            clientY = e.changedTouches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+
         return {
             x: (clientX - rect.left) * scaleX,
-            y: (clientY - rect.top) * scaleX // Assume uniform scaling for simplicity in coord mapping
+            y: (clientY - rect.top) * scaleY
         };
     };
 
     // Hit Testing
-    const HANDLE_RADIUS = 10;
-    const ROTATION_OFFSET = 35; // Distance of rotation handle from top
     const hitTest = (pos) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleFactor = canvas.width / rect.width;
+
+        // Dynamic hit-test sizes in canvas pixels based on CSS-pixel touch sizes
+        // Standard finger touch size is ~20px CSS radius (40px width)
+        const hitThreshold = 20 * scaleFactor;
+        const rotationOffset = 30 * scaleFactor;
 
         // Check selection handles first
         if (selectedIndex !== -1) {
@@ -184,19 +204,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const cx = r.x + r.w / 2;
             const cy = r.y + r.h / 2;
 
-            // Rotation Handle (Curved Arrow area) = Top center + offset
-            // We'll treat the rotation handle as a hit area above the box
-            const rotHandlePos = rotatePoint(cx, r.y - ROTATION_OFFSET, cx, cy, r.rotation);
-            if (dist(pos, rotHandlePos) < HANDLE_RADIUS * 2) return 'rotate';
+            // Rotation Handle
+            const rotHandlePos = rotatePoint(cx, r.y - rotationOffset, cx, cy, r.rotation);
+            if (dist(pos, rotHandlePos) < hitThreshold) return 'rotate';
 
-            // Resize Handles (Local coords relative to rect)
+            // Local coordinates
             const localPos = getLocalPoint(pos.x, pos.y, r);
 
-            // Check corners in local space
-            if (Math.abs(localPos.x - r.x) < HANDLE_RADIUS && Math.abs(localPos.y - r.y) < HANDLE_RADIUS) return 'resize-tl';
-            if (Math.abs(localPos.x - (r.x + r.w)) < HANDLE_RADIUS && Math.abs(localPos.y - r.y) < HANDLE_RADIUS) return 'resize-tr';
-            if (Math.abs(localPos.x - r.x) < HANDLE_RADIUS && Math.abs(localPos.y - (r.y + r.h)) < HANDLE_RADIUS) return 'resize-bl';
-            if (Math.abs(localPos.x - (r.x + r.w)) < HANDLE_RADIUS && Math.abs(localPos.y - (r.y + r.h)) < HANDLE_RADIUS) return 'resize-br';
+            // Check corners
+            if (dist(localPos, { x: r.x, y: r.y }) < hitThreshold) return 'resize-tl';
+            if (dist(localPos, { x: r.x + r.w, y: r.y }) < hitThreshold) return 'resize-tr';
+            if (dist(localPos, { x: r.x, y: r.y + r.h }) < hitThreshold) return 'resize-bl';
+            if (dist(localPos, { x: r.x + r.w, y: r.y + r.h }) < hitThreshold) return 'resize-br';
 
             // Check Inside Rect
             if (localPos.x >= r.x && localPos.x <= r.x + r.w && localPos.y >= r.y && localPos.y <= r.y + r.h) return 'move';
@@ -300,44 +319,81 @@ document.addEventListener('DOMContentLoaded', () => {
             const angle = Math.atan2(pos.y - cy, pos.x - cx);
             r.rotation = angle + Math.PI / 2;
         } else if (dragMode.startsWith('resize')) {
-            // Complex resize with rotation is hard.
-            // Easier approach: Transform current mouse to local space of Initial Rect logic
-            // But simplest UX: Resize unrotated width/height, but that looks weird if rotated.
-            // Correct way:
-            // 1. Un-rotate current mouse pos to local axis aligned space
-            const cx = initialRectState.x + initialRectState.w / 2;
-            const cy = initialRectState.y + initialRectState.h / 2;
+            const theta = initialRectState.rotation;
+            const cx_0 = initialRectState.x + initialRectState.w / 2;
+            const cy_0 = initialRectState.y + initialRectState.h / 2;
 
-            // We need to calculate new bounds in local space
+            // Determine which corner is fixed (opposite of the dragged corner)
+            let dx_local = 0;
+            let dy_local = 0;
+
+            if (dragMode === 'resize-tl') {
+                dx_local = initialRectState.w / 2;
+                dy_local = initialRectState.h / 2;
+            } else if (dragMode === 'resize-tr') {
+                dx_local = -initialRectState.w / 2;
+                dy_local = initialRectState.h / 2;
+            } else if (dragMode === 'resize-bl') {
+                dx_local = initialRectState.w / 2;
+                dy_local = -initialRectState.h / 2;
+            } else if (dragMode === 'resize-br') {
+                dx_local = -initialRectState.w / 2;
+                dy_local = -initialRectState.h / 2;
+            }
+
+            // Calculate world coordinates of the fixed opposite corner
+            const fixedWorld = rotatePoint(cx_0 + dx_local, cy_0 + dy_local, cx_0, cy_0, theta);
+
+            // Transform current mouse to the initial rect's local space
             const localMouse = getLocalPoint(pos.x, pos.y, initialRectState);
-            const localStart = getLocalPoint(startPos.x, startPos.y, initialRectState);
 
-            const dx = localMouse.x - localStart.x;
-            const dy = localMouse.y - localStart.y;
+            // Calculate new local dimensions relative to the initial unrotated tl
+            let w_prime = 0;
+            let h_prime = 0;
 
             if (dragMode === 'resize-br') {
-                r.w = Math.max(10, initialRectState.w + dx);
-                r.h = Math.max(10, initialRectState.h + dy);
+                w_prime = localMouse.x - initialRectState.x;
+                h_prime = localMouse.y - initialRectState.y;
             } else if (dragMode === 'resize-tl') {
-                const newW = Math.max(10, initialRectState.w - dx);
-                const newH = Math.max(10, initialRectState.h - dy);
-                r.x = initialRectState.x + (initialRectState.w - newW);
-                r.y = initialRectState.y + (initialRectState.h - newH);
-                r.w = newW; r.h = newH;
-            }
-            // ... Similar for TR and BL (omitted for brevity but logic implies shifts)
-            // Implementing Full standard behavior:
-            else if (dragMode === 'resize-tr') {
-                r.w = Math.max(10, initialRectState.w + dx);
-                const newH = Math.max(10, initialRectState.h - dy);
-                r.y = initialRectState.y + (initialRectState.h - newH);
-                r.h = newH;
+                w_prime = (initialRectState.x + initialRectState.w) - localMouse.x;
+                h_prime = (initialRectState.y + initialRectState.h) - localMouse.y;
+            } else if (dragMode === 'resize-tr') {
+                w_prime = localMouse.x - initialRectState.x;
+                h_prime = (initialRectState.y + initialRectState.h) - localMouse.y;
             } else if (dragMode === 'resize-bl') {
-                const newW = Math.max(10, initialRectState.w - dx);
-                r.x = initialRectState.x + (initialRectState.w - newW);
-                r.w = newW;
-                r.h = Math.max(10, initialRectState.h + dy);
+                w_prime = (initialRectState.x + initialRectState.w) - localMouse.x;
+                h_prime = localMouse.y - initialRectState.y;
             }
+
+            // Clamp new dimensions to a minimum size (e.g., 15 canvas pixels)
+            w_prime = Math.max(15, w_prime);
+            h_prime = Math.max(15, h_prime);
+
+            // Now compute the new local offset relative to new center
+            let dx_local_prime = 0;
+            let dy_local_prime = 0;
+
+            if (dragMode === 'resize-tl') {
+                dx_local_prime = w_prime / 2;
+                dy_local_prime = h_prime / 2;
+            } else if (dragMode === 'resize-tr') {
+                dx_local_prime = -w_prime / 2;
+                dy_local_prime = h_prime / 2;
+            } else if (dragMode === 'resize-bl') {
+                dx_local_prime = w_prime / 2;
+                dy_local_prime = -h_prime / 2;
+            } else if (dragMode === 'resize-br') {
+                dx_local_prime = -w_prime / 2;
+                dy_local_prime = -h_prime / 2;
+            }
+
+            const cx_prime = fixedWorld.x - (dx_local_prime * Math.cos(theta) - dy_local_prime * Math.sin(theta));
+            const cy_prime = fixedWorld.y - (dx_local_prime * Math.sin(theta) + dy_local_prime * Math.cos(theta));
+
+            r.w = w_prime;
+            r.h = h_prime;
+            r.x = cx_prime - w_prime / 2;
+            r.y = cy_prime - h_prime / 2;
         }
 
         render();
@@ -439,7 +495,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const updateUIState = () => {
+        if (selectedIndex !== -1) {
+            btnDelete.classList.remove('hidden');
+        } else {
+            btnDelete.classList.add('hidden');
+        }
+    };
+
     const render = () => {
+        updateUIState();
         if (!isRendering) {
             isRendering = true;
             requestAnimationFrame(() => {
@@ -450,6 +515,18 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const drawHandles = (c, r) => {
+        const rectLayout = canvas.getBoundingClientRect();
+        const scaleFactor = canvas.width / rectLayout.width;
+
+        // Custom scaled parameters so handles have a constant CSS layout size
+        const borderLineWidth = 2 * scaleFactor;
+        const handleRadius = 6 * scaleFactor;
+        const handleBorderWidth = 1.5 * scaleFactor;
+        
+        const rotationOffset = 30 * scaleFactor;
+        const rotationRadius = 12 * scaleFactor;
+        const rotationLineWidth = 2.5 * scaleFactor;
+        
         c.save();
         const cx = r.x + r.w / 2;
         const cy = r.y + r.h / 2;
@@ -458,50 +535,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Rect Border
         c.strokeStyle = '#9d4edd';
-        c.lineWidth = 2;
+        c.lineWidth = borderLineWidth;
         c.strokeRect(-r.w / 2, -r.h / 2, r.w, r.h);
 
         // Corners
         c.fillStyle = 'white';
+        c.strokeStyle = '#9d4edd';
+        c.lineWidth = handleBorderWidth;
         const corners = [
             [-r.w / 2, -r.h / 2], [r.w / 2, -r.h / 2],
             [r.w / 2, r.h / 2], [-r.w / 2, r.h / 2]
         ];
         corners.forEach(([x, y]) => {
             c.beginPath();
-            c.arc(x, y, 6, 0, Math.PI * 2);
+            c.arc(x, y, handleRadius, 0, Math.PI * 2);
             c.fill();
             c.stroke();
         });
 
-        // Rotation Handle (Double Arrow Curve)
+        // Rotation Handle (Curve)
         c.strokeStyle = 'white';
-        c.lineWidth = 3;
+        c.lineWidth = rotationLineWidth;
         c.beginPath();
-        // Draw an arc at top
-        c.arc(0, -r.h / 2 - 25, 12, Math.PI, 0); // Upper half circle
+        c.arc(0, -r.h / 2 - rotationOffset, rotationRadius, Math.PI, 0); // Upper half circle
         c.stroke();
 
         // Arrowheads
-        // Left
+        const arrowSize = 4 * scaleFactor;
+        
+        // Left arrowhead
         c.beginPath();
-        c.moveTo(-12, -r.h / 2 - 25);
-        c.lineTo(-8, -r.h / 2 - 20);
-        c.lineTo(-16, -r.h / 2 - 20);
+        c.moveTo(-rotationRadius, -r.h / 2 - rotationOffset);
+        c.lineTo(-rotationRadius + arrowSize, -r.h / 2 - rotationOffset + arrowSize);
+        c.lineTo(-rotationRadius - arrowSize, -r.h / 2 - rotationOffset + arrowSize);
         c.closePath();
         c.fillStyle = 'white';
         c.fill();
 
-        // Right
+        // Right arrowhead
         c.beginPath();
-        c.moveTo(12, -r.h / 2 - 25);
-        c.lineTo(8, -r.h / 2 - 20);
-        c.lineTo(16, -r.h / 2 - 20);
+        c.moveTo(rotationRadius, -r.h / 2 - rotationOffset);
+        c.lineTo(rotationRadius - arrowSize, -r.h / 2 - rotationOffset + arrowSize);
+        c.lineTo(rotationRadius + arrowSize, -r.h / 2 - rotationOffset + arrowSize);
         c.closePath();
         c.fill();
-
-        // Hit Area hint (invisible but logic knows)
-        // c.fillStyle = 'rgba(255,0,0,0.3)'; c.fill_arc... for debug
 
         c.restore();
     };
@@ -616,6 +693,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
         selectedIndex = prevSel;
         render();
+    });
+
+    // Add Rect Button logic
+    btnAddRect.addEventListener('click', () => {
+        if (!originalImage) return;
+        
+        // Add a default-sized box in the center of the canvas
+        const boxWidth = Math.min(200, canvas.width * 0.3);
+        const boxHeight = Math.min(100, canvas.height * 0.15);
+        const boxX = (canvas.width - boxWidth) / 2;
+        const boxY = (canvas.height - boxHeight) / 2;
+        
+        const newRect = {
+            x: boxX,
+            y: boxY,
+            w: boxWidth,
+            h: boxHeight,
+            rotation: 0
+        };
+        
+        redactions.push(newRect);
+        selectedIndex = redactions.length - 1;
+        render();
+    });
+
+    // Delete selected rect logic
+    btnDelete.addEventListener('click', () => {
+        if (selectedIndex !== -1) {
+            redactions.splice(selectedIndex, 1);
+            selectedIndex = -1;
+            render();
+        }
+    });
+
+    // Add keyboard shortcuts for deletion
+    window.addEventListener('keydown', (e) => {
+        if (selectedIndex !== -1 && (e.key === 'Delete' || e.key === 'Backspace')) {
+            // Prevent browser back navigation on Backspace
+            e.preventDefault();
+            redactions.splice(selectedIndex, 1);
+            selectedIndex = -1;
+            render();
+        }
     });
 
     btnNew.addEventListener('click', () => location.reload());
