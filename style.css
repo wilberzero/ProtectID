@@ -311,11 +311,66 @@ canvas {
 /* Mobile Responsive */
 @media (max-width: 600px) {
     .app-container {
-        padding: 1rem;
+        padding: 0.5rem;
+        gap: 0.8rem;
     }
 
     .logo {
-        font-size: 2.2rem;
+        font-size: 2rem;
+    }
+
+    .subtitle {
+        font-size: 0.95rem;
+    }
+
+    .privacy-badge {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+    }
+
+    .glass-panel {
+        padding: 1rem;
+        border-radius: 16px;
+    }
+
+    .image-wrapper {
+        padding: 8px;
+    }
+
+    .controls-panel {
+        gap: 0.8rem;
+    }
+
+    .tool-btn, .action-btn {
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+        border-radius: 10px;
+    }
+
+    .sliders-vertical-container {
+        padding: 0.6rem;
+        margin-bottom: 0.8rem;
+        gap: 0.5rem;
+    }
+
+    .slider-row {
+        grid-template-columns: 70px 1fr;
+        gap: 0.5rem;
+    }
+
+    .modern-input {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.9rem;
+    }
+
+    .color-palette {
+        padding: 4px;
+        gap: 6px;
+    }
+
+    .color-option {
+        width: 20px;
+        height: 20px;
     }
 
     .watermark-group {

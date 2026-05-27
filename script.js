@@ -236,31 +236,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y); // Removed duplicate
 
-    // Touch Handling State 
-    let isScrolling = null; // null: unknown, true: scrolling, false: drawing/editing
-
     const startDraw = (e) => {
-        // IMPORTANT: Do NOT preventDefault here to allow potential scrolling initialization
+        // Prevent default touch behavior (scrolling/zoom) on the canvas to ensure instant response
+        if (e.cancelable) {
+            e.preventDefault();
+        }
+
         const pos = getPos(e);
         const hit = hitTest(pos);
-        isScrolling = null; // Reset gesture detection
 
         startPos = pos;
         lastPos = pos;
         isDragging = true;
 
         if ((typeof hit === 'object' && hit.type === 'select') || (hit !== 'create')) {
-            // If hitting an element, we assume intent to edit -> Block scroll immediately
-            isScrolling = false;
             selectedIndex = (typeof hit === 'object') ? hit.index : selectedIndex;
             dragMode = (typeof hit === 'object') ? 'move' : hit;
             initialRectState = { ...redactions[selectedIndex] };
         } else {
-            // Hitting background -> Could be scroll OR create
-            // We wait for moveDraw to decide based on direction
             selectedIndex = -1; // Deselect
             dragMode = 'create';
-            isScrolling = null;
         }
 
         render(); // Update selection verify
@@ -290,29 +285,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isDragging) return;
 
         const pos = getPos(e);
-        const dx = pos.x - startPos.x;
-        const dy = pos.y - startPos.y;
 
-        // Disambiguate Scroll vs Draw
-        if (isScrolling === null) {
-            // Ignore tiny movements to avoid jitter
-            if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
-
-            // If movement is vertical, assume scroll
-            if (Math.abs(dy) > Math.abs(dx)) {
-                isScrolling = true;
-                isDragging = false; // Stop internal drag logic
-                if (isMouseEvent) canvas.style.cursor = 'default';
-                return; // Allow native scroll
-            } else {
-                // Horizontal or Diagonal -> Draw
-                isScrolling = false;
-            }
+        if (e.cancelable) {
+            e.preventDefault(); // Block browser scroll completely on canvas touch movements
         }
-
-        if (isScrolling) return; // Let browser scroll
-
-        e.preventDefault(); // Block scroll if we are drawing/editing
         lastPos = pos; // Update last known position for logic
 
         // Active drag cursor styling for desktop
