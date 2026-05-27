@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ProtectID | Privacidad DNI 2025</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+
     <meta name="description" content="Herramienta local para censurar y proteger tu DNI con marcas de agua.">
 </head>
 
@@ -15,7 +15,16 @@
 
     <main class="app-container">
         <header class="app-header">
-            <h1 class="logo">Protect<span class="highlight">ID</span></h1>
+            <div class="header-top">
+                <h1 class="logo">Protect<span class="highlight">ID</span></h1>
+                <button id="btn-info" class="info-toggle-btn" title="Información de Privacidad">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                </button>
+            </div>
             <p class="subtitle">Privacidad Local & Segura</p>
             <div class="privacy-badge">
                 <span class="icon">🔒</span>
@@ -114,6 +123,62 @@
             </div>
         </section>
     </main>
+
+    <!-- Modal de Información de Privacidad -->
+    <div id="privacy-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content glass-panel">
+            <button id="modal-close" class="modal-close-btn" aria-label="Cerrar modal">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            <div class="modal-header">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2ed573" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="modal-security-icon">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                <h2 id="modal-title">Seguridad & Privacidad</h2>
+            </div>
+            <div class="modal-body">
+                <p class="modal-intro">ProtectID ha sido diseñado bajo la filosofía de <strong>cero transferencia de datos</strong>. Tus documentos personales nunca salen de este dispositivo.</p>
+                
+                <div class="info-card-grid">
+                    <div class="info-card">
+                        <div class="info-card-header">
+                            <span class="card-icon">🔒</span>
+                            <h3>Procesamiento 100% Local</h3>
+                        </div>
+                        <p>Las imágenes se procesan en la memoria RAM del navegador. Funciona incluso si desconectas el internet por completo (Modo Avión).</p>
+                    </div>
+                    
+                    <div class="info-card">
+                        <div class="info-card-header">
+                            <span class="card-icon">🧼</span>
+                            <h3>Metadatos Eliminados (EXIF)</h3>
+                        </div>
+                        <p>Al dibujar tu foto en el canvas del navegador, se elimina automáticamente toda la información oculta (coordenadas GPS, fecha y modelo de cámara).</p>
+                    </div>
+                    
+                    <div class="info-card">
+                        <div class="info-card-header">
+                            <span class="card-icon">🍪</span>
+                            <h3>Sin Cookies ni Rastreo</h3>
+                        </div>
+                        <p>No guardamos datos de sesión ni instalamos cookies. Al recargar o cerrar la pestaña, todo rastro se destruye permanentemente.</p>
+                    </div>
+                    
+                    <div class="info-card">
+                        <div class="info-card-header">
+                            <span class="card-icon">🌐</span>
+                            <h3>Alojamiento CDN Seguro</h3>
+                        </div>
+                        <p>Alojado de forma estática en GitHub Pages. Ningún servidor remoto procesa tus imágenes; el navegador se limita a descargar el código para ejecutarlo localmente.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>

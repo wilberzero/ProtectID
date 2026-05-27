@@ -16,6 +16,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnDownload = document.getElementById('btn-download');
     const btnNew = document.getElementById('btn-new');
 
+    // Privacy Modal Elements
+    const privacyModal = document.getElementById('privacy-modal');
+    const btnInfo = document.getElementById('btn-info');
+    const modalClose = document.getElementById('modal-close');
+
     // Sliders & Pickers
     const waveSlider = document.getElementById('wave-slider');
     const angleSlider = document.getElementById('angle-slider');
@@ -765,6 +770,36 @@ document.addEventListener('DOMContentLoaded', () => {
             redactions.splice(selectedIndex, 1);
             selectedIndex = -1;
             render();
+        }
+    });
+
+    // Toggle Privacy Modal
+    if (btnInfo && privacyModal) {
+        btnInfo.addEventListener('click', (e) => {
+            e.stopPropagation();
+            privacyModal.classList.remove('hidden');
+        });
+    }
+
+    if (modalClose && privacyModal) {
+        modalClose.addEventListener('click', () => {
+            privacyModal.classList.add('hidden');
+        });
+    }
+
+    // Close modal when clicking backdrop
+    if (privacyModal) {
+        privacyModal.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-backdrop') || e.target === privacyModal) {
+                privacyModal.classList.add('hidden');
+            }
+        });
+    }
+
+    // Escape key to close modal
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && privacyModal && !privacyModal.classList.contains('hidden')) {
+            privacyModal.classList.add('hidden');
         }
     });
 

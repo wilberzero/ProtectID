@@ -9,9 +9,12 @@ La herramienta combina una interfaz de usuario premium, fluida e interactiva con
 ## 🔒 100% Privacidad Local (Auditoría de Seguridad)
 
 Para garantizar la absoluta confidencialidad de tus documentos personales, ProtectID ha sido auditado para asegurar que cumple con un enfoque de **cero transferencia de datos**:
-* **Procesamiento Local Extremo:** El archivo de imagen se carga en la memoria del navegador local usando URLs de objeto temporal (`URL.createObjectURL`). Ningún dato se almacena en la nube.
-* **Manipulación de Pixeles Segura:** Todo el renderizado, la aplicación de filtros en blanco y negro, la superposición de marcas de agua dinámicas y los rectángulos de protección se calculan en un lienzo `<canvas>` interno en la GPU/CPU de tu dispositivo.
-* **Cero Conexiones de Red:** La aplicación no realiza llamadas a APIs externas, ni `fetch()`, ni `XMLHttpRequest`, ni cuenta con scripts de telemetría de terceros. **Tus documentos de identidad jamás abandonarán este dispositivo.**
+* **Procesamiento Local Extremo:** El archivo de imagen se carga en la memoria RAM del navegador local usando URLs de objeto temporal (`URL.createObjectURL`). Ningún dato se envía ni se almacena en la nube.
+* **Manipulación de Píxeles Segura:** Todo el renderizado, filtros en blanco y negro, marcas de agua y rectángulos de censura se calculan en un lienzo `<canvas>` interno en la CPU/GPU de tu dispositivo.
+* **Exclusividad 100% Offline (Cero Conexiones Externas):** Hemos eliminado el uso de tipografías remotas (como Google Fonts) para utilizar exclusivamente las tipografías nativas de tu sistema operativo (como SF Pro en macOS/iOS, Segoe UI en Windows y Roboto en Android). Esto significa que la web realiza **literalmente cero conexiones de red** tras cargarse. Puedes abrirla, poner tu dispositivo en Modo Avión o desconectarte de internet, y funcionará al 100%.
+* **Eliminación Total de Metadatos (EXIF/GPS):** Al dibujar la imagen en el canvas del navegador, el API de HTML5 descarta automáticamente toda la información oculta del archivo original (coordenadas GPS de ubicación, fecha y hora de captura, modelo de cámara y número de serie). La imagen que descargas es una copia completamente sanitizada y anónima.
+* **Cero Cookies y Almacenamiento:** No utilizamos cookies (`document.cookie`) ni almacenamiento persistente (`localStorage` / `sessionStorage`). En cuanto recargas o cierras la pestaña, todo rastro se destruye permanentemente.
+* **Panel Informativo Integrado:** Hemos añadido un elegante botón informativo (**ℹ️**) en la cabecera de la aplicación. Al hacer clic o tocarlo, se despliega un panel interactivo que detalla estos mismos estándares de seguridad tanto en lenguaje técnico como no técnico, garantizando la confianza total de cualquier usuario.
 
 ---
 
