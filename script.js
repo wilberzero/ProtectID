@@ -267,6 +267,26 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const moveDraw = (e) => {
+        const isMouseEvent = e.type === 'mousemove';
+
+        // Hover cursor styling for desktop
+        if (!isDragging && isMouseEvent) {
+            const pos = getPos(e);
+            const hit = hitTest(pos);
+
+            if (hit === 'move' || (typeof hit === 'object' && hit.type === 'select')) {
+                canvas.style.cursor = 'move';
+            } else if (hit === 'rotate') {
+                canvas.style.cursor = 'pointer';
+            } else if (hit === 'resize-tl' || hit === 'resize-br') {
+                canvas.style.cursor = 'nwse-resize';
+            } else if (hit === 'resize-tr' || hit === 'resize-bl') {
+                canvas.style.cursor = 'nesw-resize';
+            } else {
+                canvas.style.cursor = 'crosshair';
+            }
+        }
+
         if (!isDragging) return;
 
         const pos = getPos(e);
@@ -282,6 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (Math.abs(dy) > Math.abs(dx)) {
                 isScrolling = true;
                 isDragging = false; // Stop internal drag logic
+                if (isMouseEvent) canvas.style.cursor = 'default';
                 return; // Allow native scroll
             } else {
                 // Horizontal or Diagonal -> Draw
@@ -294,15 +315,41 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault(); // Block scroll if we are drawing/editing
         lastPos = pos; // Update last known position for logic
 
+        // Active drag cursor styling for desktop
+        if (isMouseEvent) {
+            if (dragMode === 'move') {
+                canvas.style.cursor = 'grabbing';
+            } else if (dragMode === 'rotate') {
+                canvas.style.cursor = 'pointer';
+            } else if (dragMode.startsWith('resize')) {
+                if (dragMode === 'resize-tl' || dragMode === 'resize-br') {
+                    canvas.style.cursor = 'nwse-resize';
+                } else {
+                    canvas.style.cursor = 'nesw-resize';
+                }
+            } else if (dragMode === 'create') {
+                canvas.style.cursor = 'crosshair';
+            }
+        }
+
         if (dragMode === 'create') {
             render(); // Clear
-            // Draw a solid black preview rectangle
-            displayContext.fillStyle = 'rgba(0,0,0,0.8)';
+            
             const x = Math.min(startPos.x, pos.x);
             const y = Math.min(startPos.y, pos.y);
             const w = Math.abs(pos.x - startPos.x);
             const h = Math.abs(pos.y - startPos.y);
+            
+            // Draw a premium gray semi-transparent preview rectangle
+            displayContext.fillStyle = 'rgba(160, 160, 180, 0.4)';
             displayContext.fillRect(x, y, w, h);
+            
+            // Draw a beautiful dashed border to make it feel extremely premium
+            displayContext.strokeStyle = '#a0a0b0';
+            displayContext.lineWidth = 2;
+            displayContext.setLineDash([6, 4]);
+            displayContext.strokeRect(x, y, w, h);
+            displayContext.setLineDash([]); // Reset line dash
             return;
         }
 
@@ -402,6 +449,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const endDraw = (e) => {
         if (!isDragging) return;
         isDragging = false;
+
+        // Reset cursor to default on drag end
+        canvas.style.cursor = 'default';
 
         if (dragMode === 'create') {
             // Use lastPos which was tracked during move, or try to get from changedTouches
